@@ -1,0 +1,26 @@
+{
+  "name": "expresslab2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "cart-items.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "pg": "^8.5.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andyis16/express.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andyis16/express/issues"
+  },
+  "homepage": "https://github.com/andyis16/express#readme"
+}

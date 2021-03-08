@@ -3,114 +3,134 @@
 const express = require("express");
 const { stringify } = require("querystring");
 const cartItems = express.Router();
-
-// array of items
-
-const cartList = [
-    
-    {id: 1, product: 'salsa', price: 5.99, quantity: 2},
-    {id: 2, product: 'chips', price: 3.29, quantity: 4},
-    {id: 3, product: 'popcorn', price: 2.89, quantity: 1},
-    {id: 4, product: 'soda', price: 1.99, quantity: 6},
-
-  ];
+const pool = require('./connection');
 
 cartItems.get("/", (req, res) => {
-    
-  // display cart itmes that are less than the max price
 
-  const maxPrice = parseFloat(req.query.maxPrice);
-  const prefix = req.query.prefix;
-  const pageSize = parseInt(req.query.pageSize);
+const maxPrice = parseFloat(req.query.maxPrice);
+const prefix = (req.query.prefix);
+const pageSize = parseInt(req.query.pageSize);
 
-    if (maxPrice) {
-      const filtereditem = cartList.filter((i) => i.price <= maxPrice)
-      res.json(filtereditem);    
-    }
+// Display max price
 
-    // display cart items that start with string
+if (maxPrice) {
 
-    if (prefix) {
-      const filtereditem = cartList.filter((i) => i.product.startsWith(prefix))
-      res.json(filtereditem);
-    }
-    
-    // display specific number of cart items
-
-    if (pageSize) {
-      const filtereditem = cartList.splice(0,(pageSize))
-      res.json(filtereditem);
-    }
-
-    else {
-
-    // return the whole list  
+pool.query('SELECT * FROM shopping_cart WHERE price <= $1', [maxPrice]).then ( (results) => {
+    const items = results.rows;
+    res.json(items);
     res.status(200);
-    res.json(cartList);
-    
-    // res.json("ok");  not required 200 automatically shows "ok"
-    }
-  
+}
+)}
+
+// Display prefix
+
+if (prefix) {
+
+pool.query('SELECT * FROM shopping_cart WHERE product LIKE $1', [prefix]).then ((results) => {
+    const items = results.rows;
+    res.json(items);
+    res.status(200);
+
+})
+}
+
+// Display page size
+
+if (pageSize) {
+
+pool.query('SELECT * FROM shopping_cart LIMIT $1', [pageSize]).then ((results) => {
+    const items = results.rows;
+    res.json(items);
+    res.status(200);
+
+})
+}
+
+// Display all
+
+else 
+pool.query('SELECT * FROM shopping_cart').then((results) => {
+  const items = results.rows;
+  res.json(items);
+  res.status(200);
+})
+
 });
+
+// Get item by id
 
 cartItems.get("/:id", (req, res) => {
 
 const id = parseInt(req.params.id);
 
-  if (id) {
-    console.log(id);
-    const item = cartList.find(i => i.id === id)
-    res.json(item);
-  }
+if (id) {
+     
+pool.query('SELECT * FROM shopping_cart WHERE id = $1', [id]).then ((results) => {
+    const items = results.rows;
+    res.json(items);
+    res.status(200);
 
-  else {
+})
+}
+
+else {
     res.status(404);
     res.send("Sorry no such ID");
-  }
-});  
+}
+
+});
 
 // Add an item to the array using the JSON body of the request 
 
 cartItems.post("/", (req, res) => {
-  
-    let newitem = {
-        id: cartList.length + 1,
-        product: req.body.product,
-        price: parseFloat(req.body.price),
-        quantity: parseInt(req.body.quantity),
-    };
-    cartList.push(newitem);
-    res.status(201);
-    res.json(cartList); // return changed list
- });
- 
-// Update cart item in the array that has a given ID.  
 
- cartItems.put("/:id", (req, res) => {
+  const product = req.body.product;
+  const price = parseFloat(req.body.price);
+  const quantity = req.body.quantity;
+
+  // console.log(product);
+
+  pool.query('INSERT INTO shopping_cart (product, price, quantity) VALUES ($1, $2, $3) returning *',
+  [product, price, quantity]).then ((results) => {  
   
-    // look up item
-    const item = cartList.find(i => i.id === parseInt(req.params.id));
-   
-    // if item does not exist return 404
-    if (!item) return res.status(404).send('Item not found'); // Item not found = 404 error
-  
-    // update item
-    item.product = req.body.product, item.price = req.body.price, item.quantity = req.body.quantity;
-  
-    //return updated item
+    const items = results.rows;
+    res.json(items);
     res.status(200);
-    res.send(item);
+
+  })
+
+});
+
+// update item
+
+cartItems.put("/:id", (req, res) => {
+
+  const id = parseInt(req.params.id);
+  const product = req.body.product;
+  const price = parseFloat(req.body.price);
+  const quantity = req.body.quantity;
+
+  pool.query(`UPDATE shopping_cart
+  SET product=$1, price=$2, quantity=$3
+  WHERE id=$4
+  RETURNING *`, [product, price, quantity, id]).then((results) => {
+    res.json(results.rows);
   });
-  
-// Delete item by a given ID
+});
 
-cartItems.delete("/:id", (req, res) => {
-  
-  const index = parseInt(req.params.id);
-  cartList.splice(index, 1);
-  res.status(201);
-  res.json(cartList);
+// delete item
 
-});  
+cartItems.delete("/:id", (req,res) => {
+  
+  let id = parseInt(req.params.id);
+
+  pool.query(`DELETE FROM shopping_cart
+    WHERE id=$1`, [id]).then((results) => {
+    res.json();
+  });
+
+});
+
+  // console.log(product);
 
 module.exports = cartItems;
